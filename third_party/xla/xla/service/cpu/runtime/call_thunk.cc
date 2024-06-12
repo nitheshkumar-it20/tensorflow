@@ -15,18 +15,35 @@ limitations under the License.
 
 #include "xla/service/cpu/runtime/call_thunk.h"
 
+#include <memory>
 #include <utility>
 
-#include "absl/status/status.h"
+#include "absl/memory/memory.h"
+#include "absl/status/statusor.h"
 #include "xla/service/cpu/runtime/thunk.h"
+#include "xla/tsl/concurrency/async_value_ref.h"
+#include "tsl/profiler/lib/traceme.h"
 
 namespace xla::cpu {
 
-CallThunk::CallThunk(ThunkSequence called_sequence)
-    : Thunk(Kind::kCall), called_sequence_(std::move(called_sequence)) {}
+absl::StatusOr<std::unique_ptr<CallThunk>> CallThunk::Create(
+    Info info, ThunkSequence called_sequence) {
+  return absl::WrapUnique(
+      new CallThunk(std::move(info), std::move(called_sequence)));
+}
 
-absl::Status CallThunk::Execute(const ExecuteParams& params) {
+CallThunk::CallThunk(Info info, ThunkSequence called_sequence)
+    : Thunk(Kind::kCall, std::move(info)),
+      called_sequence_(std::move(called_sequence)) {}
+
+tsl::AsyncValueRef<Thunk::ExecuteEvent> CallThunk::Execute(
+    const ExecuteParams& params) {
+  tsl::profiler::TraceMe trace([&] { return TraceMeEncode(); });
   return called_sequence_.Execute(params);
+}
+
+CallThunk::BufferUses CallThunk::buffer_uses() const {
+  return called_sequence_.buffer_uses();
 }
 
 }  // namespace xla::cpu

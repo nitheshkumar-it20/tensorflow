@@ -743,14 +743,18 @@ absl::Status LayoutAssignment::AddMandatoryConstraints(
       TF_RETURN_IF_ERROR(SetInstructionLayout(custom_call->shape(), custom_call,
                                               /*mandatory=*/true, /*dfs=*/true,
                                               /*allow_alias=*/true));
-
-      for (int64_t i = 0; i < custom_call->operand_count(); ++i) {
-        if (AnyOperandBufferForwarded(custom_call, i)) {
-          TF_RET_CHECK(AllOperandBuffersForwarded(custom_call, i))
-              << "Partial alias of an operand is not supported";
-        } else {
-          TF_RETURN_IF_ERROR(SetOperandLayout(
-              custom_call->operand_shapes_with_layout()[i], custom_call, i));
+      if (custom_call->IsCustomCall("LayoutConstraint")) {
+        TF_RETURN_IF_ERROR(
+            SetOperandLayout(custom_call->shape(), custom_call, 0));
+      } else {
+        for (int64_t i = 0; i < custom_call->operand_count(); ++i) {
+          if (AnyOperandBufferForwarded(custom_call, i)) {
+            TF_RET_CHECK(AllOperandBuffersForwarded(custom_call, i))
+                << "Partial alias of an operand is not supported";
+          } else {
+            TF_RETURN_IF_ERROR(SetOperandLayout(
+                custom_call->operand_shapes_with_layout()[i], custom_call, i));
+          }
         }
       }
     } else if (IsLayoutConstrainedCollective(instruction)) {
@@ -766,7 +770,8 @@ absl::Status LayoutAssignment::AddMandatoryConstraints(
         TF_RETURN_IF_ERROR(SetOperandLayout(shape, instruction, i,
                                             /*mandatory=*/true, /*dfs=*/true));
       }
-    } else if (instruction->IsCrossModuleAllReduce()) {
+    } else if (instruction->IsCrossModuleAllReduce() &&
+               !instruction->GetModule()->config().use_spmd_partitioning()) {
       CHECK(get_channel_constraints(instruction))
           << "Multi-module layout assignment requires ChannelLayoutConstraints";
       int64_t channel_id = instruction->channel_id().value();
@@ -2902,7 +2907,6 @@ bool LayoutAssignment::InstructionCanChangeLayout(
     case HloOpcode::kCopy:
     case HloOpcode::kCopyStart:
     case HloOpcode::kCopyDone:
-    case HloOpcode::kCustomCall:
     case HloOpcode::kDomain:
     case HloOpcode::kDot:
     case HloOpcode::kFusion:
@@ -2929,6 +2933,8 @@ bool LayoutAssignment::InstructionCanChangeLayout(
     case HloOpcode::kTuple:
     case HloOpcode::kGetDimensionSize:
       return true;
+    case HloOpcode::kCustomCall:
+      return !instruction->IsCustomCall("LayoutConstraint");
   }
 }
 

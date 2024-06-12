@@ -39,16 +39,29 @@ limitations under the License.
 #include "xla/stream_executor/memory_allocation.h"
 #include "xla/stream_executor/stream.h"
 #include "xla/stream_executor/stream_executor.h"
-#include "xla/stream_executor/stream_executor_interface.h"
+#include "xla/stream_executor/stream_executor_common.h"
 #include "xla/xla_data.pb.h"
 
 namespace stream_executor {
 namespace interpreter {
 
-class XlaInterpreterExecutor : public StreamExecutor {
+// A HostStream that is used for the interpreter.
+class InterpreterStream : public host::HostStream {
+ public:
+  explicit InterpreterStream(StreamExecutor *executor)
+      : host::HostStream(executor) {}
+  absl::Status WaitFor(Stream *stream) override {
+    return host::HostStream::WaitFor(stream);
+  }
+  absl::Status WaitFor(Event *event) override {
+    return absl::UnimplementedError("Not implemented.");
+  }
+};
+
+class XlaInterpreterExecutor : public StreamExecutorCommon {
  public:
   XlaInterpreterExecutor(int device_ordinal, Platform *platform)
-      : StreamExecutor(platform), device_ordinal_(device_ordinal) {}
+      : StreamExecutorCommon(platform), device_ordinal_(device_ordinal) {}
 
   absl::Status Init() override { return absl::OkStatus(); }
 
@@ -117,10 +130,6 @@ class XlaInterpreterExecutor : public StreamExecutor {
     return absl::Status{absl::StatusCode::kUnimplemented, "RecordEvent"};
   }
 
-  absl::Status WaitForEvent(Stream *stream, Event *event) override {
-    return absl::Status{absl::StatusCode::kUnimplemented, "WaitForEvent"};
-  }
-
   void DeallocateStream(Stream *stream) override {}
   bool CreateStreamDependency(Stream *dependent, Stream *other) override;
 
@@ -138,13 +147,11 @@ class XlaInterpreterExecutor : public StreamExecutor {
   static absl::StatusOr<std::unique_ptr<DeviceDescription>>
   CreateDeviceDescription(int device_ordinal);
 
-  absl::Status EnablePeerAccessTo(StreamExecutorInterface *other) override {
+  absl::Status EnablePeerAccessTo(StreamExecutor *other) override {
     return absl::OkStatus();
   }
 
-  bool CanEnablePeerAccessTo(StreamExecutorInterface *other) override {
-    return true;
-  }
+  bool CanEnablePeerAccessTo(StreamExecutor *other) override { return true; }
   absl::StatusOr<std::unique_ptr<Event>> CreateEvent() override {
     return std::make_unique<Event>();
   }
@@ -152,7 +159,7 @@ class XlaInterpreterExecutor : public StreamExecutor {
   absl::StatusOr<std::unique_ptr<Stream>> CreateStream(
       std::optional<std::variant<StreamPriority, int>> priority =
           std::nullopt) override {
-    return std::make_unique<host::HostStream>(this);
+    return std::make_unique<InterpreterStream>(this);
   }
 
  private:

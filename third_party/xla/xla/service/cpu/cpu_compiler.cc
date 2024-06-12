@@ -1208,6 +1208,13 @@ CpuCompiler::CompileLegacyCpuExecutable(std::unique_ptr<HloModule> module) {
 #endif
   );
 
+  // Emit global variables for constants.
+  //
+  // TODO(ezhulenev): Figure out how to emit constants that are only needed for
+  // thread local computations as with Thunks runtime we keep constants outside
+  // of the LLVM module. Currently we end up doubling memory for constants.
+  TF_RETURN_IF_ERROR(nested_ir_emitter.EmitConstantGlobals());
+
   // If we use Thunk runtime then instead of emitting LLVM function for the
   // entry computation we emit a sequence of thunks that implement the
   // computation as a sequence of interpreted commands.
@@ -1258,8 +1265,6 @@ CpuCompiler::CompileLegacyCpuExecutable(std::unique_ptr<HloModule> module) {
   // before the entry computation. The order of computations returned from
   // SubcomputationEmissionOrder guarantees that a called computation occurs
   // before a caller computation.
-  TF_RETURN_IF_ERROR(nested_ir_emitter.EmitConstantGlobals());
-
   for (ComputationToEmit subcomputation :
        SubcomputationEmissionOrder(entry_computation)) {
     if (subcomputation.computation->IsFusionComputation()) {
@@ -1608,7 +1613,7 @@ class CpuExecutableAotCompilationResult : public AotCompilationResult {
     proto_.set_entry_function_name(std::string(function_name));
     proto_.set_obj_file(std::string(obj_file));
     *proto_.mutable_hlo_module()->mutable_config() =
-        *hlo_module->config().ToProto();
+        hlo_module->config().ToProto();
     module_ = hlo_module->Clone();
   }
 

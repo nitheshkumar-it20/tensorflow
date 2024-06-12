@@ -48,7 +48,7 @@ from setuptools.dist import Distribution
 # result for pip.
 # Also update tensorflow/tensorflow.bzl and
 # tensorflow/core/public/version.h
-_VERSION = '2.17.0'
+_VERSION = '2.18.0'
 
 
 # We use the same setup.py for all tensorflow_* packages and for the nightly
@@ -83,7 +83,7 @@ REQUIRED_PACKAGES = [
     'google_pasta >= 0.1.1',
     'h5py >= 3.10.0',
     'libclang >= 13.0.0',
-    'ml_dtypes ~= 0.3.1',
+    'ml_dtypes >= 0.3.1, < 0.5.0',
     # TODO(b/304751256): Adjust the numpy pin to a single version, when ready
     'numpy >= 1.23.5, < 2.0.0 ; python_version <= "3.11"',
     'numpy >= 1.26.0, < 2.0.0 ; python_version >= "3.12"',

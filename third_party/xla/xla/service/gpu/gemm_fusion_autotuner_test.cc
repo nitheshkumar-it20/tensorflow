@@ -35,6 +35,7 @@ limitations under the License.
 #include "xla/hlo/ir/hlo_instructions.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/hlo/ir/hlo_opcode.h"
+#include "xla/pjrt/distributed/key_value_store_interface.h"
 #include "xla/service/executable.h"
 #include "xla/service/gpu/autotuner_util.h"
 #include "xla/service/gpu/backend_configs.pb.h"
@@ -193,11 +194,12 @@ class GemmFusionAutotunerTest : public StatelessAutotunerTest {
     tsl::thread::ThreadPool thread_pool(tsl::Env::Default(), "",
                                         tsl::port::MaxParallelism());
     DebugOptions opts;
+    MultiProcessKeyValueStore key_value_store;
     pipeline.AddPass<GemmFusionAutotuner>(
         AutotuneConfig{DeviceConfig{backend().default_stream_executor(),
                                     backend().memory_allocator()},
                        opts},
-        GetToolkitVersion(), &thread_pool);
+        GetToolkitVersion(), &thread_pool, key_value_store);
 
     RunAndFilecheckHloRewrite(
         hlo, std::move(pipeline), expected, [](const HloModule* m) {
@@ -434,6 +436,7 @@ ENTRY e {
 }
 
 // Modify block_k back to 16 once b/337839570 is fixed.
+// TODO(b/344770374): Make this test not fragile.
 TEST_F(GemmFusionAutotunerTest, DoNotRunAutotuningKernelSpillingRegisters) {
   const std::string kHloText = R"(
 HloModule m
@@ -462,15 +465,25 @@ ENTRY %e {
                                         /*thread_pool=*/nullptr,
                                         /*layout_canonicalization_callback=*/{},
                                         /*is_autotuning_compilation=*/true}),
-      tsl::testing::StatusIs(
-          tsl::error::CANCELLED,
-          absl::StrFormat(
-              "Compilation result discarded due to register spilling")));
+      ::testing::AnyOf(
+          tsl::testing::StatusIs(
+              tsl::error::CANCELLED,
+              absl::StrFormat(
+                  "Compilation result discarded due to register spilling")),
+          // Hopper can't spill registers since wgmma instructions are
+          // asynchronous, instead it just runs out of them.
+          tsl::testing::StatusIs(
+              tsl::error::RESOURCE_EXHAUSTED,
+              absl::StrFormat("Register allocation failed"))));
 }
 
 // Modify block_k back to 16 once b/337839570 is fixed.
+// TODO(b/344770374): Make this test not fragile.
 TEST_F(GemmFusionAutotunerTest,
        DoNotFilterOutAutotuningKernelSpillingRegisters) {
+  if (GetCudaComputeCapability().IsAtLeastHopper()) {
+    GTEST_SKIP() << "Hopper and newer runs out of registers for such HLOs";
+  }
   const std::string kHloText = R"(
 HloModule m
 
@@ -650,6 +663,7 @@ ENTRY e {
   tsl::thread::ThreadPool thread_pool(tsl::Env::Default(), "",
                                       tsl::port::MaxParallelism());
   DebugOptions opts;
+  MultiProcessKeyValueStore key_value_store;
   pipeline.AddPass<GemmFusionAutotuner>(
       AutotuneConfig{DevicelessConfig{backend()
                                           .default_stream_executor()
@@ -660,7 +674,7 @@ ENTRY e {
                                           ->GetDeviceDescription()
                                           .cuda_compute_capability()},
                      opts},
-      GetToolkitVersion(), &thread_pool);
+      GetToolkitVersion(), &thread_pool, key_value_store);
 
   TF_ASSERT_OK_AND_ASSIGN(std::unique_ptr<VerifiedHloModule> module,
                           ParseAndReturnVerifiedModule(hlo));

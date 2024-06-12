@@ -73,11 +73,11 @@ class PrimitiveType(enum.IntEnum):
   U16: PrimitiveType
   U32: PrimitiveType
   U64: PrimitiveType
-  F8_E4M3FN: PrimitiveType
-  F8_E4M3B11FNUZ: PrimitiveType
-  F8_E4M3FNUZ: PrimitiveType
-  F8_E5M2: PrimitiveType
-  F8_E5M2FNUZ: PrimitiveType
+  F8E4M3FN: PrimitiveType
+  F8E4M3B11FNUZ: PrimitiveType
+  F8E4M3FNUZ: PrimitiveType
+  F8E5M2: PrimitiveType
+  F8E5M2FNUZ: PrimitiveType
   BF16: PrimitiveType
   F16: PrimitiveType
   F32: PrimitiveType
@@ -775,8 +775,10 @@ class DistributedRuntimeClient:
   ) -> _Status: ...
   def key_value_dir_get(self, key: str) -> _Status: ...
   def key_value_dir_get_bytes(self, key: str) -> _Status: ...
-  def key_value_set(self, key: str, value: str) -> _Status: ...
-  def key_value_set_bytes(self, key: str, value: bytes) -> _Status: ...
+  def key_value_set(self, key: str, value: str,
+                    allow_overwrite: bool = False) -> _Status: ...
+  def key_value_set_bytes(self, key: str, value: bytes,
+                          allow_overwrite: bool = False) -> _Status: ...
   def key_value_delete(self, key: str) -> _Status: ...
   def wait_at_barrier(
       self, barrier_id: str, timeout_in_ms: int, process_ids: Optional[List[int]]
@@ -847,9 +849,8 @@ class DeviceList:
   def memory_kinds(self) -> Tuple[str, ...]: ...
 
 class Sharding: ...
-class XLACompatibleSharding(Sharding): ...
 
-class NamedSharding(XLACompatibleSharding):
+class NamedSharding(Sharding):
   def __init__(
       self,
       mesh: Any,
@@ -866,13 +867,13 @@ class NamedSharding(XLACompatibleSharding):
   _internal_device_list: DeviceList
   _manual_axes: frozenset[Any]
 
-class SingleDeviceSharding(XLACompatibleSharding):
+class SingleDeviceSharding(Sharding):
   def __init__(self, device: Device, *, memory_kind: Optional[str] = None): ...
   _device: Device
   _memory_kind: Optional[str]
   _internal_device_list: DeviceList
 
-class PmapSharding(XLACompatibleSharding):
+class PmapSharding(Sharding):
   def __init__(
       self, devices: Sequence[Any], sharding_spec: pmap_lib.ShardingSpec
   ): ...
@@ -880,7 +881,7 @@ class PmapSharding(XLACompatibleSharding):
   sharding_spec: pmap_lib.ShardingSpec
   _internal_device_list: DeviceList
 
-class GSPMDSharding(XLACompatibleSharding):
+class GSPMDSharding(Sharding):
   def __init__(
       self,
       devices: Sequence[Device],

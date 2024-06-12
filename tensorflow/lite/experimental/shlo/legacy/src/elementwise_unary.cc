@@ -635,7 +635,7 @@ absl::Status RoundNearestEven(const QuantizedTensor& operand,
 namespace {
 
 template <typename Float>
-inline Float Rsqrt(Float x) {
+inline Float Rsqrt(Float x) {b
   // TODO(cbasile): Performing the op with a conversion to float is
   // inefficient for bf16 and f16 types.
   return Float{1} / static_cast<Float>(std::sqrt(static_cast<float>(x)));

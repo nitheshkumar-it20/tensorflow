@@ -1061,3 +1061,137 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+cc_library(
+    name = "rsqrt",
+    srcs = ["rsqrt.cc"],
+    hdrs = ["rsqrt.h"],
+    deps = [
+        ":unary_elementwise",
+        ":util",
+        "//tensorflow/lite/experimental/shlo:bf16",
+        "//tensorflow/lite/experimental/shlo:data_type",
+        "//tensorflow/lite/experimental/shlo:dispatch",
+        "//tensorflow/lite/experimental/shlo:f16",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "@com_google_absl//absl/status",
+    ],
+)
+cc_test(
+    name = "rsqrt_test",
+    srcs = ["rsqrt_test.cc"],
+    linkopts = shlo_ref_linkopts(),
+    deps = [
+        ":rsqrt",
+        ":test_util",
+        ":unary_elementwise_test_util",
+        "//tensorflow/lite/experimental/shlo:bf16",
+        "//tensorflow/lite/experimental/shlo:f16",
+        "//tensorflow/lite/experimental/shlo:quantize",
+        "//tensorflow/lite/experimental/shlo:quantized_tensor_element_type",
+        "//tensorflow/lite/experimental/shlo:shape",
+        "//tensorflow/lite/experimental/shlo:status_matcher",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+cc_library(
+    name = "atan2",
+    srcs = ["atan2.cc"],
+    hdrs = ["atan2.h"],
+    deps = [
+        ":binary_elementwise",
+        ":util",
+        "//tensorflow/lite/experimental/shlo:bf16",
+        "//tensorflow/lite/experimental/shlo:data_type",
+        "//tensorflow/lite/experimental/shlo:dispatch",
+        "//tensorflow/lite/experimental/shlo:f16",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_test(
+    name = "atan2_test",
+    srcs = ["atan2_test.cc"],
+    linkopts = shlo_ref_linkopts(),
+    deps = [
+        ":atan2",
+        ":test_util",
+        ":binary_elementwise_test_util",
+        
+        "//tensorflow/lite/experimental/shlo:bf16",
+        "//tensorflow/lite/experimental/shlo:f16",
+        "//tensorflow/lite/experimental/shlo:quantize",
+        "//tensorflow/lite/experimental/shlo:quantized_tensor_element_type",
+        "//tensorflow/lite/experimental/shlo:shape",
+        "//tensorflow/lite/experimental/shlo:status_matcher",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+cc_library(
+    name = "RoundNearestEven",
+    srcs = ["RoundNearestEven.cc"],
+    hdrs = ["RoundNearestEven.h"],
+    deps = [
+        ":unary_elementwise",
+        ":util",
+        "//tensorflow/lite/experimental/shlo:bf16",
+        "//tensorflow/lite/experimental/shlo:data_type",
+        "//tensorflow/lite/experimental/shlo:dispatch",
+        "//tensorflow/lite/experimental/shlo:f16",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_test(
+    name = "RoundNearestEven_test",
+    srcs = ["RoundNearestEven_test.cc"],
+    linkopts = shlo_ref_linkopts(),
+    deps = [
+        ":RoundNearestEven",
+        ":test_util",
+        ":unary_elementwise_test_util",
+        "//tensorflow/lite/experimental/shlo:bf16",
+        "//tensorflow/lite/experimental/shlo:f16",
+        "//tensorflow/lite/experimental/shlo:quantize",
+        "//tensorflow/lite/experimental/shlo:quantized_tensor_element_type",
+        "//tensorflow/lite/experimental/shlo:shape",
+        "//tensorflow/lite/experimental/shlo:status_matcher",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+cc_library(
+    name = "clamp",
+    srcs = ["clamp.cc"],
+    hdrs = ["clamp.h"],
+    deps = [
+        "//tensorflow/lite/experimental/shlo:data_type",
+        "//tensorflow/lite/experimental/shlo:dispatch",
+        "//tensorflow/lite/experimental/shlo:shape",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "@com_google_absl//absl/status",
+    ],
+)
+
+cc_test(
+    name = "clamp_test",
+    srcs = ["clamp_test.cc"],
+    linkopts = shlo_ref_linkopts(),
+    deps = [
+        ":clamp",
+        "//tensorflow/lite/experimental/shlo:bf16",
+        "//tensorflow/lite/experimental/shlo:data_type",
+        "//tensorflow/lite/experimental/shlo:f16",
+        "//tensorflow/lite/experimental/shlo:shape",
+        "//tensorflow/lite/experimental/shlo:status_matcher",
+        "//tensorflow/lite/experimental/shlo:tensor",
+        "//tensorflow/lite/experimental/shlo:tensor_matcher",
+        "@com_google_absl//absl/types:span",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+
